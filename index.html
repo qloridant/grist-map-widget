@@ -22,6 +22,14 @@
   <script>
 
     grist.ready();  // Let Grist know the widget is ready
+
+    grist.onRecord((record) => {
+      console.log("Record received from Grist:", record);
+      const coords = record.Coords;
+      if (coords) {
+        updateMap(coords);
+      }
+    });
     
     const map = L.map('map').setView([0, 0], 2);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

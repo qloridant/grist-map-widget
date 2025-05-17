@@ -115,7 +115,6 @@
           fillOpacity: 0.3
         }).bindPopup(`Zone de dépôt ${zone.name}`).addTo(map);
 
-        bounds.push(...zone.polygon);
         layers.push(polygon);
       });
 

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Map Viewer</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <style>
+    html, body, #map {
+      height: 100%;
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <script>
+    const map = L.map('map').setView([0, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    let markers = [];
+
+    function updateMap(coordsRaw) {
+      try {
+        let coords;
+        if (typeof coordsRaw === 'string') {
+          // Support both JSON and CSV-like formats
+          coords = coordsRaw.trim().startsWith("[")
+            ? JSON.parse(coordsRaw)
+            : coordsRaw.split(";").map(pair => pair.split(",").map(Number));
+        } else {
+          coords = coordsRaw;
+        }
+
+        // Clear old markers
+        markers.forEach(marker => map.removeLayer(marker));
+        markers = [];
+
+        if (coords.length === 0) return;
+
+        coords.forEach(([lat, lon]) => {
+          const marker = L.marker([lat, lon]).addTo(map);
+          markers.push(marker);
+        });
+
+        // Center map
+        const bounds = L.latLngBounds(coords.map(([lat, lon]) => [lat, lon]));
+        map.fitBounds(bounds, { padding: [20, 20] });
+
+      } catch (e) {
+        console.error("Failed to parse coordinates", e);
+      }
+    }
+
+    window.addEventListener("message", (event) => {
+      const data = event.data;
+      if (data.Coords) {
+        updateMap(data.Coords);
+      }
+    });
+  </script>
+</body>
+</html>

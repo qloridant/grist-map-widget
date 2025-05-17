@@ -44,7 +44,7 @@
       }
     ];
 
-    const map = L.map('map').setView([48.8566, 2.3522], 13);
+    const map = L.map('map').setView([47.678, -3.522], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
     }).addTo(map);
@@ -56,57 +56,58 @@
       layers = [];
     }
 
-    function parseArray(input) {
+    function parseCoords(input) {
+      if (!input) return [];
+
       if (typeof input === "string") {
         try {
           return JSON.parse(input);
         } catch {
-          return input.split(/[;,]/).map(x => x.trim()).map(Number);
+          console.warn("Failed to parse Coords string");
+          return [];
         }
       }
-      return input;
+
+      return Array.isArray(input) ? input : [];
     }
 
     function updateMap(data) {
       clearMap();
 
-      const lats = parseArray(data.LAT);
-      const lons = parseArray(data.LON);
-      const timestamps = parseArray(data.TIMESTAMP);
-
-      if (!lats || !lons || !timestamps || lats.length !== lons.length || lats.length !== timestamps.length) {
-        console.warn("LAT/LON/TIMESTAMP arrays are mismatched or invalid.");
+      const coords = parseCoords(data.Coords);
+      if (!coords.length) {
+        console.warn("No valid Coords");
         return;
       }
 
-      const coordinates = [];
+      const pathPoints = [];
+      const bounds = [];
 
-      for (let i = 0; i < lats.length; i++) {
-        const lat = lats[i], lon = lons[i], ts = timestamps[i];
-        console.log(lat)
-        console.log(lon)
-        console.log(ts)
-        coordinates.push([lat, lon]);
+      coords.forEach(([lat, lon, timestamp]) => {
+        const point = [lat, lon];
+        pathPoints.push(point);
+        bounds.push(point);
 
-        const marker = L.circleMarker([lat, lon], {
+        const marker = L.circleMarker(point, {
           radius: 3,
           color: "blue",
           fill: true,
           fillColor: "blue",
           fillOpacity: 0.8
-        }).bindPopup(`Timestamp: ${ts}`).addTo(map);
+        }).bindPopup(`Timestamp: ${timestamp}`).addTo(map);
 
         layers.push(marker);
+      });
+
+      if (pathPoints.length > 1) {
+        const polyline = L.polyline(pathPoints, {
+          color: "red",
+          weight: 2.5,
+          opacity: 0.8
+        }).addTo(map);
+        layers.push(polyline);
       }
 
-      const polyline = L.polyline(coordinates, {
-        color: "red",
-        weight: 2.5,
-        opacity: 0.8
-      }).addTo(map);
-      layers.push(polyline);
-
-      // Add zones_depots
       ZONES_DEPOTS.forEach(zone => {
         const polygon = L.polygon(zone.polygon, {
           color: "green",
@@ -114,21 +115,23 @@
           fillOpacity: 0.3
         }).bindPopup(`Zone de dépôt ${zone.name}`).addTo(map);
 
+        bounds.push(...zone.polygon);
         layers.push(polygon);
       });
 
-      const bounds = L.latLngBounds(coordinates.concat(...ZONES_DEPOTS.map(z => z.polygon)));
-      map.fitBounds(bounds, { padding: [20, 20] });
+      if (bounds.length) {
+        map.fitBounds(L.latLngBounds(bounds), { padding: [20, 20] });
+      }
     }
 
     grist.ready();
 
     grist.onRecord((record) => {
       console.log("Received record:", record);
-      if (record && record.LAT && record.LON && record.TIMESTAMP) {
+      if (record?.Coords) {
         updateMap(record);
       } else {
-        console.warn("Missing LAT/LON/TIMESTAMP in Grist record.");
+        console.warn("Missing Coords field");
       }
     });
   </script>

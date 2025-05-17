@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Map Viewer</title>
+  <title>Map Widget</title>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -20,17 +20,6 @@
   <div id="map"></div>
 
   <script>
-
-    grist.ready();  // Let Grist know the widget is ready
-
-    grist.onRecord((record) => {
-      console.log("Record received from Grist:", record);
-      const coords = record.Coords;
-      if (coords) {
-        updateMap(coords);
-      }
-    });
-    
     const map = L.map('map').setView([0, 0], 2);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
@@ -42,7 +31,6 @@
       try {
         let coords;
         if (typeof coordsRaw === 'string') {
-          // Support both JSON and CSV-like formats
           coords = coordsRaw.trim().startsWith("[")
             ? JSON.parse(coordsRaw)
             : coordsRaw.split(";").map(pair => pair.split(",").map(Number));
@@ -50,34 +38,29 @@
           coords = coordsRaw;
         }
 
-        // Clear old markers
         markers.forEach(marker => map.removeLayer(marker));
         markers = [];
 
-        if (coords.length === 0) return;
+        if (!coords || coords.length === 0) return;
 
         coords.forEach(([lat, lon]) => {
           const marker = L.marker([lat, lon]).addTo(map);
           markers.push(marker);
         });
 
-        // Center map
         const bounds = L.latLngBounds(coords.map(([lat, lon]) => [lat, lon]));
         map.fitBounds(bounds, { padding: [20, 20] });
-
       } catch (e) {
-        console.error("Failed to parse coordinates", e);
+        console.error("Map update failed:", e);
       }
     }
 
-    window.addEventListener("message", (event) => {
-      const data = event.data;
-      console.log(event.data)
-      console.log(data.Coords)
-      console.log(event.data.columnValues.Coords);
-      console.log('Event detected')
-      if (data.Coords) {
-        updateMap(data.Coords);
+    grist.ready();
+
+    grist.onRecord((record) => {
+      console.log("Received record:", record);
+      if (record && record.Coords) {
+        updateMap(record.Coords);
       }
     });
   </script>

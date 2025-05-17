@@ -20,47 +20,112 @@
   <div id="map"></div>
 
   <script>
-    const map = L.map('map').setView([0, 0], 2);
+    const ZONES_DEPOTS = [
+      {
+        name: "Groix",
+        polygon: [
+            [47.665319,-3.544454],
+            [47.674286,-3.528924],
+            [47.677236,-3.523707],
+            [47.677403,-3.545874],
+            [47.665319,-3.564458],
+            [47.665319,-3.544454]
+        ]
+      },
+      {
+        name: "Saint Nazaire",
+        polygon: [
+            [47.151351,-2.3594498],
+            [47.1675473,-2.3489785],
+            [47.1682035,-2.3880226],
+            [47.1519774,-2.3991369],
+            [47.151351,-2.359449]
+        ]
+      }
+    ];
+
+    const map = L.map('map').setView([48.8566, 2.3522], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
-    let markers = [];
+    let layers = [];
 
-    function updateMap(coordsRaw) {
-      try {
-        let coords;
-        if (typeof coordsRaw === 'string') {
-          coords = coordsRaw.trim().startsWith("[")
-            ? JSON.parse(coordsRaw)
-            : coordsRaw.split(";").map(pair => pair.split(",").map(Number));
-        } else {
-          coords = coordsRaw;
-        }
-
-        markers.forEach(marker => map.removeLayer(marker));
-        markers = [];
-
-        if (!coords || coords.length === 0) return;
-
-        coords.forEach(([lat, lon]) => {
-          const marker = L.marker([lat, lon]).addTo(map);
-          markers.push(marker);
-        });
-
-        const bounds = L.latLngBounds(coords.map(([lat, lon]) => [lat, lon]));
-        map.fitBounds(bounds, { padding: [20, 20] });
-      } catch (e) {
-        console.error("Map update failed:", e);
-      }
+    function clearMap() {
+      layers.forEach(layer => map.removeLayer(layer));
+      layers = [];
     }
 
-    grist.ready({columns: ['Coords']});
+    function parseArray(input) {
+      if (typeof input === "string") {
+        try {
+          return JSON.parse(input);
+        } catch {
+          return input.split(/[;,]/).map(x => x.trim()).map(Number);
+        }
+      }
+      return input;
+    }
+
+    function updateMap(data) {
+      clearMap();
+
+      const lats = parseArray(data.LAT);
+      const lons = parseArray(data.LON);
+      const timestamps = parseArray(data.TIMESTAMP);
+
+      if (!lats || !lons || !timestamps || lats.length !== lons.length || lats.length !== timestamps.length) {
+        console.warn("LAT/LON/TIMESTAMP arrays are mismatched or invalid.");
+        return;
+      }
+
+      const coordinates = [];
+
+      for (let i = 0; i < lats.length; i++) {
+        const lat = lats[i], lon = lons[i], ts = timestamps[i];
+        coordinates.push([lat, lon]);
+
+        const marker = L.circleMarker([lat, lon], {
+          radius: 3,
+          color: "blue",
+          fill: true,
+          fillColor: "blue",
+          fillOpacity: 0.8
+        }).bindPopup(`Timestamp: ${ts}`).addTo(map);
+
+        layers.push(marker);
+      }
+
+      const polyline = L.polyline(coordinates, {
+        color: "red",
+        weight: 2.5,
+        opacity: 0.8
+      }).addTo(map);
+      layers.push(polyline);
+
+      // Add zones_depots
+      ZONES_DEPOTS.forEach(zone => {
+        const polygon = L.polygon(zone.polygon, {
+          color: "green",
+          fill: true,
+          fillOpacity: 0.3
+        }).bindPopup(`Zone de dépôt ${zone.name}`).addTo(map);
+
+        layers.push(polygon);
+      });
+
+      const bounds = L.latLngBounds(coordinates.concat(...ZONES_DEPOTS.map(z => z.polygon)));
+      map.fitBounds(bounds, { padding: [20, 20] });
+    }
+
+    grist.ready();
 
     grist.onRecord((record) => {
       console.log("Received record:", record);
-      if (record && record.Coords) {
-        updateMap(record.Coords);
+      if (record && record.LAT && record.LON && record.TIMESTAMP) {
+        updateMap(record);
+      } else {
+        console.warn("Missing LAT/LON/TIMESTAMP in Grist record.");
       }
     });
   </script>

@@ -102,20 +102,6 @@
         opacity: 0.8
       }).addTo(map);
       layers.push(polyline);
-
-      // Add zones_depots
-      ZONES_DEPOTS.forEach(zone => {
-        const polygon = L.polygon(zone.polygon, {
-          color: "green",
-          fill: true,
-          fillOpacity: 0.3
-        }).bindPopup(`Zone de dépôt ${zone.name}`).addTo(map);
-
-        layers.push(polygon);
-      });
-
-      const bounds = L.latLngBounds(coordinates.concat(...ZONES_DEPOTS.map(z => z.polygon)));
-      map.fitBounds(bounds, { padding: [20, 20] });
     }
 
     grist.ready();

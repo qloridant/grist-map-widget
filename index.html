@@ -55,7 +55,7 @@
       }
     }
 
-    grist.ready();
+    grist.ready({columns: ['Coords']});
 
     grist.onRecord((record) => {
       console.log("Received record:", record);

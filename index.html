@@ -7,6 +7,7 @@
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
 
   <style>
     html, body, #map {
@@ -20,14 +21,7 @@
 
   <script>
 
-    document.addEventListener('DOMContentLoaded', () => {
-      if (window.grist) {
-        console.log('Grist API Methods:', Object.keys(window.grist));
-      } else {
-        console.error('Grist API not loaded');
-      }
-    });
-
+    grist.ready();  // Let Grist know the widget is ready
     
     const map = L.map('map').setView([0, 0], 2);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {

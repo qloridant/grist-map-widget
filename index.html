@@ -60,6 +60,7 @@
 
     window.addEventListener("message", (event) => {
       const data = event.data;
+      console.log(event.data)
       if (data.Coords) {
         updateMap(data.Coords);
       }

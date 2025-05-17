@@ -62,6 +62,7 @@
       const data = event.data;
       console.log(event.data)
       console.log(data.Coords)
+      console.log(event.data.columnValues.Coords);
       console.log('Event detected')
       if (data.Coords) {
         updateMap(data.Coords);
